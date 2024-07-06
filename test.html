@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>评论区1</title>
+    <style>
+         body {
+            margin: 0;
+            height: 100vh; 
+            background-color: #f0f0f0; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .box1 {
+            background-color: grey;
+            width: 400px;
+            height: 300px;
+            border: double;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-radius: 10px;
+            padding: 20px;
+            box-sizing: border-box; 
+            margin-bottom: 20px; 
+        }
+        .box11, .box12 {
+            width: 100%;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px; 
+            box-sizing: border-box;
+            margin-bottom: 10px; 
+        }
+        .box11 {
+            background-color: greenyellow;
+        }
+        .box12 {
+            background-color: rgb(64, 63, 63);
+            color: white; 
+        }
+        .box13 {
+            width: 100%; 
+            height: 60px; 
+            background-color: rgb(179, 49, 49);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: auto; 
+        }
+        input[type="text"] {
+            flex: 1; 
+            margin-left: 10px; 
+            height: 30px; 
+        }
+        input[type="submit"] {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: rgb(179, 49, 49);
+            color: white;
+            font-size: 20px; 
+            cursor: pointer;
+            border-radius: 10px; 
+            transition: background-color 0.3s; 
+        }
+        input[type="submit"]:hover {
+            background-color: rgb(150, 40, 40); 
+        }
+        .box2{
+            background-color: #c9c6c6;
+            height: 108px;
+            width: 512px;
+            border-color:black;
+            border-radius: 5px;
+            border-left-width: 10px;
+            border-style:solid;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .delete-btn {
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            align-self: flex-end;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            margin: 0 5px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #ccc;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .pagination button:hover {
+            background-color: #aaa;
+        }
+        .comment-count {
+            margin-top: 20px;
+        }
+        .box2:hover{
+            background-color: aliceblue;
+        }
+    </style>
+</head>
+<body>
+    <!-- 保持表单和评论区结构不变 -->
+    <form id="commentForm">
+        <div class="box1">
+            <h1>评论区</h1>
+            <div class="box11">
+                <label for="username">UsersName</label>
+                <input type="text" id="username" placeholder="在这里输入用户名">
+            </div>
+            <br>
+            <div class="box12">
+                <label for="comment">Comments</label>
+                <input type="text" id="comment" placeholder="在这里输入评论">
+            </div>
+            <div class="box13">
+                <input type="submit" value="发布">
+            </div>
+        </div>
+    </form>
+    <div id="commentSection"></div>
+    <div class="pagination">
+        <button id="prevPage">上一页</button>
+        <button id="nextPage">下一页</button>
+    </div>
+    <div class="comment-count">总评论数: <span id="totalComments">0</span></div>
+    
+    <script>
+        let comments = [];
+        let currentPage = 1;
+        const commentsPerPage = 4;
+
+        document.getElementById('commentForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const comment = document.getElementById('comment').value.trim();
+
+            if (username === '') {
+                alert('用户名不能为空');
+                return;
+            }
+            if (comment === '') {
+                alert('评论内容不能为空');
+                return;
+            }
+
+            const newComment = { username, comment };
+            fetch('/api/add-comment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newComment)
+            })
+            .then(response => response.json())
+            .then(comment => {
+                comments.push(comment);
+                updateComments();
+            });
+
+            document.getElementById('username').value = '';
+            document.getElementById('comment').value = '';
+        });
+
+        function fetchComments() {
+            fetch('/api/comments')
+                .then(response => response.json())
+                .then(data => {
+                    comments = data;
+                    updateComments();
+                });
+        }
+
+        function updateComments() {
+            const commentSection = document.getElementById('commentSection');
+            commentSection.innerHTML = '';
+            const start = (currentPage - 1) * commentsPerPage;
+            const end = start + commentsPerPage;
+            const currentComments = comments.slice(start, end);
+
+            currentComments.forEach(({ id, username, comment }) => {
+                const commentElement = document.createElement('div');
+                commentElement.classList.add('box2');
+
+                const user = document.createElement('h3');
+                user.textContent = username;
+
+                const userComment = document.createElement('p');
+                userComment.textContent = comment;
+
+                const deleteButton = document.createElement('button');
+                deleteButton.classList.add('delete-btn');
+                deleteButton.textContent = '删除';
+
+                deleteButton.addEventListener('click', function() {
+                    fetch(`/api/delete-comment/${id}`, {
+                        method: 'DELETE'
+                    }).then(() => {
+                        comments = comments.filter(c => c.id !== id);
+                        updateComments();
+                    });
+                });
+
+                commentElement.appendChild(user);
+                commentElement.appendChild(userComment);
+                commentElement.appendChild(deleteButton);
+
+                commentSection.appendChild(commentElement);
+            });
+
+            document.getElementById('totalComments').textContent = comments.length;
+            updatePaginationButtons();
+        }
+
+        function updatePaginationButtons() {
+            const prevButton = document.getElementById('prevPage');
+            const nextButton = document.getElementById('nextPage');
+            const totalPages = Math.ceil(comments.length / commentsPerPage);
+
+            prevButton.disabled = currentPage === 1;
+            nextButton.disabled = currentPage === totalPages;
+        }
+
+        document.getElementById('prevPage').addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                updateComments();
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', function() {
+            const totalPages = Math.ceil(comments.length / commentsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updateComments();
+            }
+        });
+
+        // Load comments from server on page load
+        fetchComments();
+    </script>
+</body>
+</html>
